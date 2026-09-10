@@ -115,6 +115,13 @@ ok "plugins/"
 cp -a "$SCRIPT_DIR/tools/"* "$OPENCODE_DIR/tools/" 2>/dev/null || true
 ok "tools/"
 
+# Dashboard (zero-dep web UI for agents/skills/config)
+if [ -d "$SCRIPT_DIR/dashboard" ]; then
+  cp -a "$SCRIPT_DIR/dashboard" "$OPENCODE_DIR/dashboard"
+  chmod +x "$OPENCODE_DIR/dashboard/server.js" 2>/dev/null || true
+  ok "dashboard/ → $OPENCODE_DIR/dashboard"
+fi
+
 # ── Copy Skills ───────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}[5/7] Installing skills...${RESET}"
@@ -164,4 +171,7 @@ echo -e "    1. Create your .env file:"
 echo -e "       ${CYAN}cp $OPENCODE_DIR/env.example $OPENCODE_DIR/.env${RESET}"
 echo -e "    2. Edit .env with your real tokens"
 echo -e "    3. Run ${CYAN}opencode${RESET} to start using your agents"
+echo -e "    4. Launch the dashboard (optional):"
+echo -e "       ${CYAN}node $OPENCODE_DIR/dashboard/server.js${RESET}"
+echo -e "       → http://127.0.0.1:8877"
 echo ""
