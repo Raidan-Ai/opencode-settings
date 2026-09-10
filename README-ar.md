@@ -131,8 +131,30 @@ codedata/
 ├── context/              # ملفات السياق والمعايير
 ├── config/               # إعدادات_agent-metadata.json
 ├── plugins/              # إضافات TypeScript
-└── tools/                # أدوات مخصصة (env, gemini)
+├── tools/                # أدوات مخصصة (env, gemini)
+└── dashboard/            # لوحة تحكم ويب بدون تبعيات (واجهة للعوامل والمهارات والإعدادات)
 ```
+
+---
+
+## 🖥️ لوحة التحكم (استعراض وتحرير إعداداتك)
+
+يأتي المستودع مع **لوحة تحكم ويب بدون أي تبعيات** (مكتبات Node القياسية فقط — لا حاجة
+إلى `npm install`). سكربتا التثبيت ينسخانها تلقائياً إلى `~/.config/opencode/dashboard/`.
+
+```bash
+# التشغيل (Linux / macOS)
+node ~/.config/opencode/dashboard/server.js
+
+# Windows
+node "$HOME\.config\opencode\dashboard\server.js"
+```
+
+افتح <http://127.0.0.1:8877> — استعرض العوامل والمهارات والنماذج وخوادم MCP
+وملف `opencode.jsonc`، وحرّرها مباشرة من المتصفح (كل عملية حفظ تنشئ نسخة احتياطية
+`.bak-dash-*` أولاً). متغيرات إضافية: `DASHBOARD_PORT` و`DASHBOARD_HOST`
+و`OPENCODE_AGENT_DIR` و`OPENCODE_SKILLS_DIR` و`OPENCODE_CONFIG_FILE`.
+التوثيق الكامل للواجهة والإعدادات في `dashboard/README.md`.
 
 ---
 

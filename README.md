@@ -22,7 +22,8 @@ codedata/
 ├── skills/
 │   ├── opencode/         # Installed OpenCode skills (cloudflare, frontend, security, …)
 │   └── nvidia/           # NVIDIA skills (cuOpt, DOCA, Jetson, TAO, DeepStream, …)
-└── tools/                # Custom tools (env loader, gemini)
+├── tools/                # Custom tools (env loader, gemini)
+└── dashboard/            # Zero-dependency web dashboard (agents/skills/config UI)
 ```
 
 ---
@@ -74,6 +75,27 @@ Copy-Item $HOME\.config\opencode\env.example $HOME\.config\opencode\.env
 ```
 
 > OpenCode resolves `~/.config/opencode` identically on Linux, macOS, and Windows — no platform-specific config path is needed.
+
+---
+
+## Dashboard (browsing & editing your setup)
+
+The repo ships a **zero-dependency** web dashboard (Node standard library only —
+no `npm install`). Both installers copy it to `~/.config/opencode/dashboard/`.
+
+```bash
+# Start (Linux / macOS)
+node ~/.config/opencode/dashboard/server.js
+
+# Windows
+node "$HOME\.config\opencode\dashboard\server.js"
+```
+
+Open <http://127.0.0.1:8877> — inspect agents, skills, models, MCP servers, and
+`opencode.jsonc`; edit agents/config directly from the browser (every write
+creates a `.bak-dash-*` backup first). Env overrides: `DASHBOARD_PORT`,
+`DASHBOARD_HOST`, `OPENCODE_AGENT_DIR`, `OPENCODE_SKILLS_DIR`,
+`OPENCODE_CONFIG_FILE`. Full API + config docs in `dashboard/README.md`.
 
 ---
 
