@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCode Control Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --card: #21262d; --border: #30363d;
+    --fg: #e6e8eb; --muted: #8b949e; --accent: #79aec8;
+    --ok: #3fb950; --warn: #eabb33; --err: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); display: flex; flex-direction: column;
+  }
+  header {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+  }
+  header h1 { font-size: 1.1rem; margin: 0; font-weight: 600; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--err); display: inline-block; }
+  .dot.on { background: var(--ok); }
+  #poll { color: var(--muted); font-size: 0.85rem; }
+  nav { display: flex; gap: 0.25rem; padding: 0.4rem 1.25rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+  nav button {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 0.85rem; padding: 0.45rem 0.9rem; border-radius: 6px; font-weight: 500;
+  }
+  nav button:hover { color: var(--fg); background: var(--card); }
+  nav button.active { background: var(--accent); color: var(--bg); }
+  main { flex: 1; overflow-y: auto; padding: 1.25rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .card h3 { margin: 0 0 0.75rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.55rem 0.75rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
+  td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; }
+  .pill.on { background: rgba(63,185,80,0.15); color: var(--ok); }
+  .pill.off { background: rgba(248,81,73,0.12); color: var(--muted); }
+  .btn {
+    background: var(--bg2); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  textarea { width: 100%; min-height: 45vh; background: var(--bg2); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; resize: vertical; }
+  .muted { color: var(--muted); font-size: 0.8rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .stat { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 0.75rem; color: var(--muted); }
+  #toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 20px);
+    background: var(--card); border: 1px solid var(--border); color: var(--fg);
+    padding: 0.6rem 1.1rem; border-radius: 8px; font-size: 0.85rem;
+    opacity: 0; transition: all 0.25s ease; pointer-events: none; z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; overflow: auto; font-size: 0.78rem; max-height: 30vh; }
+</style>
+</head>
+<body>
+<header>
+  <h1>OpenCode Control Dashboard</h1>
+  <span class="dot" id="dot"></span>
+  <span id="poll">offline</span>
+</header>
+<nav id="nav">
+  <button data-tab="status" class="active">Status</button>
+  <button data-tab="agents">Agents</button>
+  <button data-tab="skills">Skills</button>
+  <button data-tab="models">Models</button>
+  <button data-tab="mcp">MCPs</button>
+  <button data-tab="config">Config</button>
+</nav>
+<main id="main"></main>
+<div id="toast"></div>
+
+<script>
+const API = location.origin && location.origin.startsWith('http') ? location.origin : 'http://127.0.0.1:8877';
+let currentTab = 'status';
+let toastTimer = null;
+let agentsCache = [];
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.color = isErr ? 'var(--err)' : 'var(--fg)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
+// ── status polling ──────────────────────────────────────────────
+async function poll() {
+  try {
+    const s = await api('/api/status');
+    document.getElementById('dot').classList.add('on');
+    document.getElementById('poll').textContent = 'online · v' + s.version + ' · up ' + s.uptime + 's';
+  } catch {
+    document.getElementById('dot').classList.remove('on');
+    document.getElementById('poll').textContent = 'offline';
+  }
+}
+
+// ── tab machinery ───────────────────────────────────────────────
+document.getElementById('nav').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  currentTab = b.dataset.tab;
+  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('active', x === b));
+  render();
+});
+
+async function render() {
+  const main = document.getElementById('main');
+  try {
+    if (currentTab === 'status') return renderStatus(main);
+    if (currentTab === 'agents') return renderAgents(main);
+    if (currentTab === 'skills') return renderSkills(main);
+    if (currentTab === 'models') return renderModels(main);
+    if (currentTab === 'mcp') return renderMcp(main);
+    if (currentTab === 'config') return renderConfig(main);
+  } catch (err) {
+    main.innerHTML = '<div class="card"><h3>Error</h3><p class="muted">' + esc(err.message) + '</p></div>';
+  }
+}
+
+async function renderStatus(main) {
+  const s = await api('/api/status');
+  const sum = await api('/api/summary');
+  const [agents, skills, mcp, models] = await Promise.all([
+    api('/api/agents'), api('/api/skills'), api('/api/mcp'), api('/api/models')
+  ]);
+  const cards = [
+    { label: 'Agents', val: agents.length },
+    { label: 'Skills', val: skills.length },
+    { label: 'MCPs configured', val: mcp.length },
+    { label: 'Models available', val: models.length }
+  ];
+  main.innerHTML = `
+    <div class="grid2">
+      ${cards.map(c => `
+        <div class="card">
+          <div class="stat">${c.val}</div>
+          <div class="stat-label">${c.label}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <h3>Runtime</h3>
+      <table>
+        <tr><td>Dashboard</td><td>v${s.version} on 127.0.0.1:${s.port} (uptime ${s.uptime}s)</td></tr>
+        <tr><td>Plugins</td><td>${sum.plugins.map(esc).join(' · ')}</td></tr>
+        <tr><td>Providers</td><td>${sum.providers.map(esc).join(', ')}</td></tr>
+        <tr><td>Enabled MCPs</td><td>${sum.enabledMcp.map(esc).join(', ')}</td></tr>
+      </table>
+    </div>`;
+}
+
+async function renderAgents(main) {
+  agentsCache = await api('/api/agents');
+  const table = `
+    <div class="card">
+      <h3>Agents (${agentsCache.length}) — click row to edit</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Mode</th><th>Model</th><th>Description</th><th>Path</th></tr></thead>
+        <tbody>
+          ${agentsCache.map(a => `
+            <tr style="cursor:pointer" onclick="editAgent('${esc(a.path)}')">
+              <td><strong>${esc(a.name)}</strong></td>
+              <td><span class="pill ${a.mode === 'primary' ? '' : 'off'}">${esc(a.mode)}</span></td>
+              <td class="muted">${esc(a.model || 'default')}</td>
+              <td class="muted">${esc((a.description || '').slice(0, 80))}</td>
+              <td class="muted">${esc(a.path)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  main.innerHTML = table;
+}
+
+async function editAgent(relPath) {
+  // relPath may contain quotes that broke the inline onclick — decode from cache instead
+  const agent = agentsCache.find(a => a.path === decodeURIComponent(relPath));
+  if (!agent) return toast('Agent not found', true);
+  main.innerHTML = `
+    <div class="card">
+      <h3>Edit — ${esc(agent.name)} <span class="muted">(${esc(agent.path)})</span></h3>
+      <p class="muted">YAML/TOML-style frontmatter at top; instructions below. Save writes a .bak first.</p>
+      <textarea id="agentRaw" spellcheck="false"></textarea>
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem">
+        <button class="btn primary" onclick="saveAgent('${esc(agent.path)}')">Save Agent</button>
+        <button class="btn" onclick="render()">Back</button>
+      </div>
+    </div>`;
+  document.getElementById('agentRaw').value = agent.raw;
+}
+
+async function saveAgent(relPath) {
+  const raw = document.getElementById('agentRaw').value;
+  try {
+    const r = await api('/api/agent', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: relPath, raw })
+    });
+    toast('Saved. Backup: ' + r.backedUpTo.split('/').pop());
+    setTimeout(() => render(), 800);
+  } catch (e) { toast('Save failed: ' + e.message, true); }
+}
+
+async function renderSkills(main) {
+  const skills = await api('/api/skills');
+  main.innerHTML = `
+    <div class="card"><h3>Skills (${skills.length})</h3></div>
+    <div class="grid2">
+      ${skills.map(s => `
+        <div class="card">
+          <h3>${esc(s.name)}</h3>
+          <p class="muted" style="margin:0 0 0.4rem">${esc(s.description || 'No description')}</p>
+          <span class="muted">${esc(s.path)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function renderModels(main) {
+  const models = await api('/api/models');
+  main.innerHTML = `
+    <div class="card">
+      <h3>Available Models (${models.length})</h3>
+      <table>
+        <thead><tr><th>Provider</th><th>Model ID</th></tr></thead>
+        <tbody>
+          ${models.map(m => `
+            <tr><td><strong>${esc(m.provider)}</strong></td><td class="muted">${esc(m.model)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function renderMcp(main) {
+  const mcps = await api('/api/mcp');
+  main.innerHTML = `
+    <div class="card">
+      <h3>MCP Servers (${mcps.length})</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>URL / Command</th></tr></thead>
+        <tbody>
+          ${mcps.map(m => `
+            <tr>
+              <td><strong>${esc(m.name)}</strong></td>
+              <td>${esc(m.type)}</td>
+              <td><span class="pill ${m.enabled ? 'on' : 'off'}">${m.enabled ? 'enabled' : 'disabled'}</span></td>
+              <td class="muted">${esc(m.url || m.command || '-')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function renderConfig(main) {
+  const c = await api('/api/config');
+  main.innerHTML = `
+    <div class="card">
+      <h3>opencode.jsonc — full configuration</h3>
+      <p class="muted">Edits are validated before write; original is backed up automatically. Restart OpenCode to apply.</p>
+      <textarea id="configRaw" spellcheck="false"></textarea>
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem">
+        <button class="btn primary" onclick="saveConfig()">Save Config</button>
+        <button class="btn" onclick="renderConfig(window.main)">Reload</button>
+      </div>
+    </div>`;
+  document.getElementById('configRaw').value = c.raw;
+}
+
+async function saveConfig() {
+  const raw = document.getElementById('configRaw').value;
+  try {
+    const r = await api('/api/config', { method: 'PUT', body: raw });
+    toast('Config saved. Backup: ' + r.backedUpTo.split('/').pop());
+  } catch (e) { toast('Save failed: ' + e.message, true); }
+}
+
+// ── init ────────────────────────────────────────────────────────
+poll();
+setInterval(poll, 5000);
+render();
+</script>
+</body>
+</html>
