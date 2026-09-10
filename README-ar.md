@@ -1,5 +1,7 @@
 <div dir="rtl" lang="ar">
 
+![OpenCode codedata](info.png)
+
 # OpenCode codedata
 
 ![الإصدار](https://img.shields.io/badge/version-2.0.0-blue)
