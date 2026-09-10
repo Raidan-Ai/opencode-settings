@@ -68,6 +68,7 @@ codedata/
 │   ├── opencode/         # 47 OpenCode skills
 │   └── nvidia/           # 363 NVIDIA skills
 ├── tools/                # env + gemini tooling
+├── AGENTS.md             # Instructions for coding agents (auto-install)
 ├── env.example           # environment variable template
 ├── install.ps1           # Windows PowerShell installer
 ├── install.sh            # Linux/macOS shell installer
@@ -114,6 +115,8 @@ After installing:
 | `--no-backup` | Skip backing up existing configuration |
 | `--force` | Overwrite without confirmation |
 | `--prefix <dir>` | Install opencode config under `<dir>/.config/opencode` (agents/skills still go to `~/.agents`) |
+| `--mode <mode>` | Force mode: full | update | uninstall | preview |
+| `--components <a,b,c>` | Comma-separated component subset: agents,skills,commands,context,config,plugins,tools,dashboard,plugindeps |
 
 ### `install.ps1`
 
@@ -126,9 +129,50 @@ After installing:
 | `-NoBackup` | Skip backing up existing configuration |
 | `-Force` | Overwrite without confirmation |
 | `-Prefix <dir>` | Install opencode config under `<dir>\.config\opencode` (agents/skills still go to `~\.agents`) |
+| `-Mode <mode>` | Force mode: full | update | uninstall | preview |
+| `-Components "a,b,c"` | Comma-separated component subset |
 
 > **No administrator rights required** — everything installs into your user
 > profile. PowerShell scripts are run with current user permissions.
+
+## Interactive installer
+
+Running `install.sh` or `install.ps1` without flags opens an interactive menu:
+
+  [1] Full install    — fresh install of ALL components (existing config backed up first)
+  [2] Update         — merge: add missing components, never overwrite existing user files
+  [3] Uninstall      — backup then remove installed dirs
+  [4] Preview        — dry-run of a full install
+  [5] Help           — show usage
+  [0] Exit
+
+After choosing 1 or 2, a component checklist appears (default ALL = yes):
+
+  agents? [Y/n]
+  skills? [Y/n]
+  commands? [Y/n]
+  context? [Y/n]
+  config? [Y/n]     (opencode.jsonc, env.example, package.json)
+  plugins? [Y/n]
+  tools? [Y/n]
+  dashboard? [Y/n]
+  plugin deps? [Y/n]   (bun/npm install)
+
+A summary is shown and "Proceed? [Y/n]" is asked before executing.
+
+Non-interactive flags are still supported:
+
+  bash install.sh --mode full               # Full install
+  bash install.sh --mode update              # Update (merge only)
+  bash install.sh --components agents,skills  # Install only agents & skills
+  bash install.sh --dry-run                  # Preview, modify nothing
+
+Windows:
+
+  .\install.ps1 -Mode full                  # Full install
+  .\install.ps1 -Mode update                 # Update (merge only)
+  .\install.ps1 -Components "agents,skills"  # Install only agents & skills
+  .\install.ps1 -DryRun                      # Preview, modify nothing
 
 ## Dashboard
 
@@ -166,6 +210,35 @@ your real values — never commit secrets to the repository:
 
 Secrets are referenced through `{env:VAR}` placeholders so plaintext keys never
 appear in the repository.
+
+## MCP Servers
+
+This repository integrates with **12 configured MCP (Model Context Protocol) servers** that provide additional context and capabilities:
+
+- **context7** — Codebase memory and vector search
+- **GitHub** — Repository integration and PR management
+- **Cloudflare** — Workers AI and platform services
+- **Notion** — Documentation and knowledge base
+- **Composio** — Tool integration and automation
+- **codebase-memory** — Knowledge graph and indexing
+
+Each MCP server is pre-wired with `{env:VAR}` placeholders in the environment configuration. See the [Environment Variables](#environment-variables) section for the full list of configurable MCP endpoints and credentials.
+
+## Providers
+
+The installer supports API credentials from multiple providers. These are configured via `{env:VAR}` placeholders in `env.example` — never commit real keys to the repository:
+
+| Provider | Environment Variable | Purpose |
+|----------|---------------------|---------|
+| **Anthropic** | `ANTHROPIC_API_KEY` | Anthropic Claude API |
+| **OpenAI** | `OPENAI_API_KEY` | OpenAI GPT API |
+| **Google Gemini** | `GEMINI_API_KEY` | Google Gemini API |
+| **NVIDIA** | `NVIDIA_API_KEY` | NVIDIA NIM / NGC API |
+| **Context7** | `CONTEXT7_API_KEY` | Codebase memory and vector search |
+| **GitHub** | `GITHUB_TOKEN` | Repository access and PR management |
+| **Cloudflare** | `CLOUDFLARE_API_KEY` | Workers AI and platform services |
+| **Notion** | `NOTION_TOKEN` | Documentation and knowledge base |
+| **Composio** | `COMPOSIO_API_KEY` | Tool integration and automation |
 
 ## What Gets Installed Where
 
@@ -232,7 +305,10 @@ Use `--dry-run` / `-DryRun` first to preview exactly what will be removed.
    `commands/`, `context/`, `plugins/`, `tools/`, `dashboard/`).
 3. Update the installer `VERSION` (and this README's badges) if the
    installation layout changes.
-4. Verify with a dry-run install before opening a pull request:
+4. See [AGENTS.md](AGENTS.md) — an instruction file that lets any coding agent
+   (OpenCode, Claude Code, Cursor, ...) clone and install this repo for you,
+   with the choice of update vs clean install.
+5. Verify with a dry-run install before opening a pull request:
 
    ```bash
    bash install.sh --dry-run

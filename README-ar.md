@@ -1,358 +1,353 @@
 <div dir="rtl" lang="ar">
 
-# 📂 إعدادات OpenCode — نسخة احتياطية شاملة
+# OpenCode codedata
 
-نسخة احتياطية كاملة من إعدادات OpenCode — العوامل (Agents)، المهارات (Skills)، الإضافات (Plugins)، الأوامر (Commands)، وملفات السياق (Context).
+![الإصدار](https://img.shields.io/badge/version-2.0.0-blue)
+![الوكلاء](https://img.shields.io/badge/agents-50-green)
+![مهارات OpenCode](https://img.shields.io/badge/opencode_skills-47-green)
+![مهارات NVIDIA](https://img.shields.io/badge/nvidia_skills-363-green)
+![الأوامر](https://img.shields.io/badge/commands-12-blueviolet)
+![الأدوات](https://img.shields.io/badge/tools-2-orange)
+![الإضافات](https://img.shields.io/badge/plugins-1-orange)
+![ملفات السياق](https://img.shields.io/badge/context_files-176-lightgrey)
+![المنصات](https://img.shields.io/badge/platform-Linux_%7C_macOS_%7C_Windows-lightgrey)
 
-<p dir="ltr">
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-  ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
-  ![Agents](https://img.shields.io/badge/Agents-50-blue)
-  ![Skills](https://img.shields.io/badge/Skills-410-purple)
-  ![Dashboard](https://img.shields.io/badge/Dashboard-Zero--Dependency-green)
-</p>
+مستودع مُنظَّم ومُتحكَّم بإصداراته يحتوي على **وكلاء** و**مهارات** و**أوامر**
+و**سياق** و**أدوات** و**إضافات** خاصة بـ OpenCode — مع مُثبِّتين جاهزين
+لنظامي لينكس/ماك (`install.sh`) وويندوز (`install.ps1`).
 
-> **🔒 ضمان الأمان:** جميع بيانات الاعتماد في هذا المستودع عبارة عن نصوص بديلة (`{env:VAR}` أو `your_..._here`). تتواجد الرموز الحقيقية فقط في بيئتك المحلية / ملفات `.env` المُستبعدة من Git.
-
----
-
-<a id="contents"></a>
-## 📑 فهرس المحتويات
-
-1. [المزايا](#features)
-2. [محتويات المستودع](#contents-table)
-3. [المتطلبات](#requirements)
-4. [التثبيت](#installation)
-5. [لوحة التحكم](#dashboard)
-6. [هيكل المشروع](#structure)
-7. [المتغيرات المطلوبة](#env)
-8. [خوادم MCP](#mcp)
-9. [المزودون](#providers)
-10. [ملاحظات الأمان](#security)
-11. [إلغاء التثبيت](#uninstall)
-12. [التحديث من المصدر](#update)
-13. [استكشاف الأخطاء والأسئلة الشائعة](#faq)
-14. [المساهمة](#contributing)
-15. [الترخيص](#license)
-
----
-
-<a id="features"></a>
-## ✨ المزايا
-
-- **50 ملف تعريف عامل** عبر 6 فئات — العوامل الأساسية (core)، المحتوى (content)، الإدارة (meta)، المساعدون المتخصصون (subagents)، والبيانات (data) — مع نصوص نظام مخصصة لكل دور.
-- **410 مهارات (47 مهارة OpenCode + 363 مهارة NVIDIA)** — Cloudflare، Frontend، Security، cuOpt، DOCA، Jetson، TAO، DeepStream، NeMo، وغيرها — كل مهارة بملف `SKILL.md` خاص بها.
-- **12 أمر شريط مخصص** لسير العمل الشائعة.
-- **176 ملف سياق** — نظام السياق (أساسي، تطوير، ذكاء مشروع، واجهة مستخدم) — 4 ملفات إضافية مقارنة بال הקודם.
-- **12 خادم MCP مُهيأ** — context7 وGitHub ومجموعة Cloudflare وNotion وComposio وcodebase-memory مفعّلة افتراضيًا؛ و9 خوادم أخرى معدة مسبقًا (معطّلة حتى تضيف بيانات الاعتماد).
-- **لوحة تحكم ويب بدون أي تبعيات** — استعرض وحرّر العوامل والمهارات والإعدادات وخوادم MCP من <http://127.0.0.1:8877> (مكتبات Node القياسية فقط — لا حاجة إلى `npm install`).
-- **سكربتا تثبيت متعدد المنصات** — `install.sh` (Linux / macOS) و`install.ps1` (Windows) مع دعم المعاينة (dry-run) وإلغاء التثبيت والنسخ الاحتياطي والتحقق.
-- **بدون أسرار بالتصميم** — كل رمز هو نص بديل `{env:VAR}`؛ لا تُرفع المفاتيح في المستودع أبدًا.
+> **الفهرس**
+>
+> - [المميزات](#المميزات)
+> - [هيكل المستودع](#هيكل-المستودع)
+> - [البدء السريع](#البدء-السريع)
+> - [خيارات المُثبِّت](#خيارات-المثبت)
+> - [لوحة التحكم](#لوحة-التحكم)
+> - [متغيرات البيئة](#متغيرات-البيئة)
+> - [مواقع التثبيت](#مواقع-التثبيت)
+> - [التحقق من التثبيت](#التحقق-من-التثبيت)
+> - [التحديث](#التحديث)
+> - [إلغاء التثبيت](#إلغاء-التثبيت)
+> - [المساهمة](#المساهمة)
+> - [الأمان](#الأمان)
+> - [استكشاف الأخطاء](#استكشاف-الأخطاء)
+> - [الأسئلة الشائعة](#الأسئلة-الشائعة)
+> - [الترخيص](#الترخيص)
 
 ---
 
-<a id="contents-table"></a>
-## 📋 محتويات المستودع
+## المميزات
 
-| المجلد | المحتوى | العدد |
-|--------|---------|-------|
-| 🤖 `agents/` | تعريفات العوامل الأساسية والمساعدين | 50 ملف |
-| 🛠️ `skills/opencode/` | مهارات OpenCode (Cloudflare, Frontend, Security, ...) | 47 مجلد |
-| 🛠️ `skills/nvidia/` | مهارات NVIDIA (cuOpt, DOCA, Jetson, TAO, DeepStream, ...) | 363 مجلد |
-| ⚡ `plugins/` | إضافات OpenCode (notif.ts) | 1 ملف |
-| 📜 `commands/` | أوامر شريط الأوامر المخصصة | 12 ملف |
-| 📝 `context/` | السياق والمعايير وسير العمل | 176 ملف |
-| ⚙️ `config/` | ملفات الإعدادات الإضافية (agent-metadata.json) | 1 ملف |
-| 🔧 `tools/` | أدوات مخصصة (.load env, gemini) | 2 ملف |
+| المجال | العدد | الوصف |
+|--------|------:|-------|
+| **الوكلاء** | 50 | وكلاء فرعيون: Planner و Worker و Reviewer بالإضافة إلى مهندسين متخصصين (أمن، قواعد بيانات، واجهات أمامية، سحابة، DevOps، NVIDIA…). |
+| **مهارات OpenCode** | 47 | مجموعة مهارات OpenCode الرسمية (هندسة البرمجيات، السحابة، الواجهات، الخلفيات، قواعد البيانات، الأمن…). |
+| **مهارات NVIDIA** | 363 | مهارات NVIDIA التي تغطي DOCA و DeepStream و Holoscan و Jetson و cuOpt و cuDF و NeMo و TAO و Dynamo و VSS ومخططات RAG والمزيد. |
+| **الأوامر** | 12 | أوامر شرطة مائلة قابلة لإعادة الاستخدام. |
+| **السياق** | 176 | ملفات سياق مشتركة لسلوك وكيل متسق. |
+| **الأدوات** | 2 | أدوات إضافية (`env`، `gemini`). |
+| **الإضافات** | 1 | إضافة `notify`. |
+| **إجمالي الملفات** | ~5,600 | كل شيء في مستودع git واحد. |
 
-> **الإجمالي: 5,622 ملف** — جاهز للنسخ والتثبيت على أي جهاز.
+- **لوحة تحكم بدون أي تبعيات** — واجهة ويب محلية يقدمها Node، دون `npm install`.
+- **وضع التجربة الجافة (Dry-run)** — معاينة كل إجراء قبل لمس القرص.
+- **نسخ احتياطية تلقائية** — إعداداتك الحالية لا تُحذف أبدًا.
+- **متعدد المنصات** — نفس الميزات على يونكس وويندوز.
 
----
-
-<a id="requirements"></a>
-## 🖥️ المتطلبات
-
-| المتطلب | الحد الأدنى | ملاحظات |
-|---------|------------|---------|
-| **Node.js** | 20+ | لعملية تثبيت الإضافات |
-| **Git** | أي إصدار | لاستنساخ المستودع |
-| **OpenCode CLI** | أحدث إصدار | لتشغيل العوامل والمهارات |
-| **نظام التشغيل** | Linux / macOS / Windows | متوافق مع الأنظمة الثلاثة |
-
----
-
-<a id="installation"></a>
-## ⚡ التثبيت
-
-### 🐧 Linux / macOS
-
-```bash
-# 1. استنساخ المستودع
-git clone git@github.com:Raidan-Ai/opencode-settings.git ~/opencode-settings
-cd ~/opencode-settings
-
-# 2. تشغيل سكربت التثبيت
-bash install.sh
-```
-
-**خيارات سكربت التثبيت (`install.sh`):**
-
-| الخيار | الوصف |
-|--------|-------|
-| `-h`, `--help` | عرض نص الاستخدام |
-| `--dry-run` | طباعة ما *سيتم* تنفيذه — بدون نسخ أي شيء |
-| `--uninstall` | إزالة المجلدات المثبتة (بعد نسخها احتياطيًا إلى `*.uninstall-backup.<ts>`) |
-| `--no-dashboard` | تخطي نسخ لوحة التحكم |
-| `--no-backup` | تخطي خطوة النسخ الاحتياطي |
-| `--force` | الكتابة فوق الموجود بدون سؤال (الافتراضي: يسأل إذا كان الهدف موجودًا) |
-| `--prefix <dir>` | التثبيت في مسار مخصص بدلًا من `~/.config/opencode` |
-
-### 🪟 Windows (PowerShell)
-
-```powershell
-# 1. استنساخ المستودع
-git clone git@github.com:Raidan-Ai/opencode-settings.git $HOME\opencode-settings
-cd $HOME\opencode-settings
-
-# 2. تشغيل سكربت التثبيت (لا يتطلب صلاحيات المسؤول)
-.\install.ps1
-```
-
-**خيارات سكربت التثبيت (`install.ps1`):**
-
-| الخيار | الوصف |
-|--------|-------|
-| `-Help` | عرض نص الاستخدام |
-| `-DryRun` | طباعة ما *سيتم* تنفيذه — بدون نسخ أي شيء |
-| `-Uninstall` | إزالة المجلدات المثبتة (بعد نسخها احتياطيًا) |
-| `-NoDashboard` | تخطي نسخ لوحة التحكم |
-| `-NoBackup` | تخطي خطوة النسخ الاحتياطي |
-| `-Force` | الكتابة فوق الموجود بدون سؤال |
-| `-Prefix <dir>` | التثبيت في مسار مخصص بدلًا من `%USERPROFILE%\.config\opencode` |
-
-> سكربتا التثبيت ينسخان الإعدادات إلى `~/.config/opencode` (نفس المسار على الأنظمة الثلاثة)، ويقومان بنسخ احتياطي لأي إعدادات موجودة، ثم ينتهيان بخطوة تحقق تطبع التعدادات.
-
----
-
-<a id="manual"></a>
-## 🔧 التثبيت اليدوي
-
-### Linux / macOS
-
-```bash
-# إنشاء مجلد الإعدادات
-mkdir -p ~/.config/opencode
-
-# نسخ العوامل والأدوات
-cp -r agents commands config context plugins skills tools ~/.config/opencode/
-cp opencode.jsonc env.example package.json ~/.config/opencode/
-
-# نسخ مهارات NVIDIA
-mkdir -p ~/.agents
-cp -r skills/nvidia/* ~/.agents/skills/
-cp skill-lock.json ~/.agents/.skill-lock.json
-
-# تجهيز ملف البيئة
-cp ~/.config/opencode/env.example ~/.config/opencode/.env
-# ✏️ حرر ملف .env بإعداداتك الخاصة
-```
-
-### Windows (PowerShell)
-
-```powershell
-# إنشاء مجلد الإعدادات
-New-Item -ItemType Directory -Force $HOME\.config\opencode
-
-# نسخ العوامل والأدوات
-Copy-Item -Recurse agents,commands,config,context,plugins,skills,tools $HOME\.config\opencode\
-Copy-Item opencode.jsonc,env.example,package.json $HOME\.config\opencode\
-
-# نسخ مهارات NVIDIA
-New-Item -ItemType Directory -Force $HOME\.agents
-Copy-Item -Recurse skills\nvidia\* $HOME\.agents\skills\
-Copy-Item skill-lock.json $HOME\.agents\.skill-lock.json
-
-# تجهيز ملف البيئة
-Copy-Item $HOME\.config\opencode\env.example $HOME\.config\opencode\.env
-# ✏️ حرر ملف .env بإعداداتك الخاصة
-```
-
----
-
-<a id="dashboard"></a>
-## 🖥️ لوحة التحكم (استعراض وتحرير إعداداتك)
-
-يأتي المستودع مع **لوحة تحكم ويب بدون أي تبعيات** (مكتبات Node القياسية فقط — لا حاجة
-إلى `npm install`). سكربتا التثبيت ينسخانها تلقائيًا إلى `~/.config/opencode/dashboard/`.
-
-```bash
-# التشغيل (Linux / macOS)
-node ~/.config/opencode/dashboard/server.js
-
-# Windows
-node "$HOME\.config\opencode\dashboard\server.js"
-```
-
-افتح <http://127.0.0.1:8877> — استعرض العوامل والمهارات والنماذج وخوادم MCP
-وملف `opencode.jsonc`، وحرّرها مباشرة من المتصفح (كل عملية حفظ تنشئ نسخة احتياطية
-`.bak-dash-*` أولاً). متغيرات إضافية: `DASHBOARD_PORT` و`DASHBOARD_HOST`
-و`OPENCODE_AGENT_DIR` و`OPENCODE_SKILLS_DIR` و`OPENCODE_CONFIG_FILE`.
-التوثيق الكامل للواجهة والإعدادات في `dashboard/README.md`.
-
----
-
-<a id="structure"></a>
-## 🗂️ هيكل المشروع
+## هيكل المستودع
 
 ```
 codedata/
-├── opencode.jsonc        # الإعدادات الرئيسية (مُنظّف — بدون أسرار)
-├── env.example           # قالب متغيرات البيئة
-├── package.json          # تبعيات الإضافات
-├── skill-lock.json       # سجل مهارات Skill Registry
-├── install.sh            # سكربت التثبيت (Linux / macOS)
-├── install.ps1           # سكربت التثبيت (Windows)
-├── README.md             # التوثيق بالإنجليزية
-├── README-ar.md          # التوثيق بالعربية ← أنت هنا
-├── agents/               # 50 تعريف عامل مخصص (core, content, meta, subagents, data)
-├── commands/             # 12 أمر شريط مخصص
-├── config/               # إعدادات_agent-metadata.json
-├── context/              # نظام السياق — 176 ملف (core, development, project-intelligence, ui)
-├── plugins/              # إضافات TypeScript
+├── agents/               # 50 تعريفًا للوكلاء
+├── commands/             # 12 أمرًا
+├── config/               # بيانات وصفية للوكلاء
+├── context/              # 176 ملف سياق
+├── dashboard/            # لوحة تحكم محلية بدون تبعيات
+│   ├── server.js         # خادم Node HTTP (المنفذ 8877)
+│   └── public/           # أصول ثابتة
+├── plugins/              # إضافة notify
 ├── skills/
-│   ├── opencode/         # 47 مهارة OpenCode (Cloudflare, Frontend, Security, ...)
-│   └── nvidia/           # 363 مهارة NVIDIA (cuOpt, DOCA, Jetson, TAO, DeepStream, ...)
-├── tools/                # أدوات مخصصة (env, gemini)
-└── dashboard/            # لوحة تحكم ويب بدون تبعيات (واجهة للعوامل والمهارات والإعدادات)
+│   ├── opencode/         # 47 مهارة OpenCode
+│   └── nvidia/           # 363 مهارة NVIDIA
+├── tools/                # أدوات env + gemini
+├── env.example           # قالب متغيرات البيئة
+├── AGENTS.md             # تعليمات للوكلاء البرمجيين (تثبيت تلقائي)
+├── install.ps1           # مُثبِّت ويندوز (PowerShell)
+├── install.sh            # مُثبِّت لينكس/ماك
+├── opencode.jsonc        # إعداد OpenCode
+├── package.json
+└── skill-lock.json       # إصدارات المهارات المثبَّتة
 ```
 
----
+## البدء السريع
 
-<a id="env"></a>
-## 🔑 المتغيرات المطلوبة
-
-جميع الأسرار مُشارة إليها عبر `{env:VAR}` في `opencode.jsonc`. قم بإنشاء ملف `.env` وتعبئته:
-
-| المتغّر | الغرض |
-|---------|-------|
-| `GITHUB_TOKEN` | خادم GitHub MCP (رمز PAT بنطاق `repo`) |
-| `NOTION_TOKEN` | خادم Notion MCP (رمز Bearer) |
-| `COMPOSIO_API_KEY` | خادم Composio MCP (مفتاح المستهلك) |
-| `RAIDAN_BASE_URL` | عنوان Raidan المتوافق مع OpenAI (مثل بوابة Cloudflare tunnel الخاصة بك) |
-| `DATABASE_URL` | PostgreSQL (معطّل افتراضيًا) |
-| `REDIS_URL` | Redis (معطّل افتراضيًا) |
-| `MILVUS_ADDR` | Milvus Vector DB (معطّل افتراضيًا) |
-| `AWS_REGION` / `AWS_PROFILE` | AWS MCP (معطّل افتراضيًا) |
-| `ALIBABA_CLOUD_ACCESS_KEY_ID` / `_SECRET` | Alibaba Cloud Ops MCP (معطّل افتراضيًا) |
-| `GEMINI_API_KEY` | أداة Gemini |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | إضافة Telegram (اختياري) |
-| `MINIMAX_API_KEY` | MiniMax API (اختياري) |
-
----
-
-<a id="mcp"></a>
-## 🔌 خوادم MCP
-
-| الخادم | الحالة | ملاحظات |
-|--------|--------|---------|
-| context7 | ✅ مفعّل | عن بُعد، بدون مصادقة |
-| github | ✅ مفعّل | يتطلب `GITHUB_TOKEN` |
-| cloudflare (+docs, bindings, builds, observability) | ✅ مفعّل | OAuth — `opencode mcp auth cloudflare` |
-| notion | ✅ مفعّل | يتطلب `NOTION_TOKEN` |
-| composio | ✅ مفعّل | يتطلب `COMPOSIO_API_KEY` |
-| codebase-memory | ✅ مفعّل | برنامج محلي في `~/.codebase-memory` (v0.10.8) |
-| playwright / postgres / redis / milvus / azure / aws / vercel / gcloud / firebase | ⛔ معطّل | فعّلها بعد توفير بيانات الاعتماد |
-
----
-
-<a id="providers"></a>
-## 🏷️ المزودون
-
-`opencode.jsonc` يعرّف مزودي النماذج (K3, DeepSeekPro, Nemotron, Raidan) كنقاط نهاية متوافقة مع OpenAI. يتم الإعلان عن *نقطة النهاية* فقط — **لا تُخزَّن أي مفاتيح API في هذا المستودع**. أضف مفتاحك عبر متغيرات البيئة أو تدفق مصادقة OpenCode.
-
----
-
-<a id="security"></a>
-## 🛡️ ملاحظات الأمان
-
-- ⚠️ **لا تقم بتشفير هذا المستودع** — تحتوي ملفات العوامل على اتفاقيات ملكية خاصة.
-- 📋 فحص الأسرار قبل الدفع:
-  ```bash
-  grep -rlnE "ghp_|ntn_|sk-[A-Za-z0-9]|AKIA[0-9A-Z]|Bearer [A-Za-z0-9_-]{20,}" . --exclude-dir=node_modules
-  ```
-- 🚫 ملفات `.env` و`node_modules` مستبعدة من Git تلقائيًا.
-- 🔄 إذا قمت بالترقّي، استبدل `{env:RAIDAN_BASE_URL}` في `opencode.jsonc` بعنوانك الخاص.
-
----
-
-<a id="uninstall"></a>
-## 🗑️ إلغاء التثبيت
-
-يدعم سكربتا التثبيت إلغاء تثبيت نظيف **مع نسخ احتياطي أولًا** — لا يُحذف أي شيء
-بدون نسخة زمنية (`*.uninstall-backup.<ts>`).
+### لينكس / ماك
 
 ```bash
-# Linux / macOS — معاينة أولًا، ثم الإلغاء
-bash install.sh --uninstall --dry-run
+git clone https://github.com/Raidan-Ai/opencode-settings.git codedata
+cd codedata
+bash install.sh
+```
+
+### ويندوز (PowerShell)
+
+```powershell
+git clone https://github.com/Raidan-Ai/opencode-settings.git codedata
+cd codedata
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+بعد التثبيت:
+
+1. انسخ `env.example` إلى `.env`.
+2. ضع رموز المزودين الحقيقية (انظر [متغيرات البيئة](#متغيرات-البيئة)).
+3. شغّل `opencode` — وكلاؤك ومهاراتك جاهزة.
+4. (اختياري) شغّل لوحة التحكم: `node dashboard/server.js`.
+
+## خيارات المُثبِّت
+
+### `install.sh`
+
+| الخيار | الوصف |
+|--------|-------|
+| `--help` | عرض المساعدة والخروج |
+| `--dry-run` | معاينة كل إجراء دون تعديل أي شيء |
+| `--uninstall` | نسخ احتياطي ثم إزالة الإعداد المثبَّت |
+| `--no-dashboard` | تخطي لوحة التحكم |
+| `--no-backup` | تخطي النسخ الاحتياطي للإعداد الحالي |
+| `--force` | الكتابة فوق الملفات دون تأكيد |
+| `--prefix <dir>` | تثبيت إعداد opencode تحت `<dir>/.config/opencode` (تبقى الوكلاء والمهارات في `~/.agents`) |
+| `--mode <mode>` | forz mode: full | update | uninstall | preview |
+| `--components <a,b,c>` | القائمة الفرعية المفصولة بفواصل: agents,skills,commands,context,config,plugins,tools,dashboard,plugindeps |
+
+### `install.ps1`
+
+| الخيار | الوصف |
+|--------|-------|
+| `-Help` | عرض المساعدة والخروج |
+| `-DryRun` | معاينة كل إجراء دون تعديل أي شيء |
+| `-Uninstall` | نسخ احتياطي ثم إزالة الإعداد المثبَّت |
+| `-NoDashboard` | تخطي لوحة التحكم |
+| `-NoBackup` | تخطي النسخ الاحتياطي للإعداد الحالي |
+| `-Force` | الكتابة فوق الملفات دون تأكيد |
+| `-Prefix <dir>` | تثبيت إعداد opencode تحت `<dir>\.config\opencode` (تبقى الوكلاء والمهارات في `~\.agents`) |
+| `-Mode <mode>` | forz mode: full | update | uninstall | preview |
+| `-Components "a,b,c"` | القائمة الفرعية المفصولة بفواصل |
+
+> **لا حاجة لصلاحيات المسؤول** — كل شيء يُثبَّت داخل ملف تعريف المستخدم.
+
+## تثبيت تفاعلي
+
+تشغيل `install.sh` أو `install.ps1` دون علميات (-flags) يفتح قائمة تفاعلية:
+
+  [1] تركيب كامل    — تركيب جميع المكونات (يُنشأ نسخة احتياطية للإعداد الحالي أولاً)
+  [2] تحديث         — إضافة: إضافة مكونات ناقصة، لا يتم overwriting ملفات المستخدم الحالية
+  [3] إلغاء التثبيت — النسخ الاحتياطي ثم إزالة التثبيت
+  [4] معاينة         — تجربة جافة لتركيب كامل
+  [5] مساعدة         — عرض الاستخدام
+  [0] خروج
+
+بعد اختيار 1 أو 2، تظهر قائمة اختيار المكونات (الافتراضي ALL = نعم):
+
+  الوكلاء؟ [Y/n]
+  المهارات؟ [Y/n]
+  أوامر؟ [Y/n]
+  سياق؟ [Y/n]
+  Configuration؟ [Y/n]   (opencode.jsonc, env.example, package.json)
+  إضافات؟ [Y/n]
+  أدوات؟ [Y/n]
+  لوحة التحكم؟ [Y/n]
+  تبعيات الإضافات؟ [Y/n]   (bun/npm install)
+
+يتم عرض ملخص ويُسأل "Proceed? [Y/n]" قبل التنفيذ.
+
+لا تزال الأعلام غير التفاعلية مدعومة:
+
+  bash install.sh --mode full               # تركيب كامل
+  bash install.sh --mode update              # تحديث (إضافة فقط)
+  bash install.sh --components agents,skills  # تركيب الوكلاء والمهارات فقط
+  bash install.sh --dry-run                  # معاينة، لا شيء يُعدل
+
+ويندوز:
+
+  .\install.ps1 -Mode full                  # تركيب كامل
+  .\install.ps1 -Mode update                 # تحديث (إضافة فقط)
+  .\install.ps1 -Components "agents,skills"  # تركيب الوكلاء والمهارات فقط
+  .\install.ps1 -DryRun                      # معاينة، لا شيء يُعدل
+
+## لوحة التحكم
+
+يَنسخ المُثبِّت مجلد `dashboard/` إلى دليل إعداد OpenCode لديك.
+إنه خادم Node.js HTTP بدون تبعيات:
+
+```bash
+node ~/.config/opencode/dashboard/server.js
+# -> http://127.0.0.1:8877
+```
+
+التهيئة عبر متغيرات البيئة:
+
+| المتغير | الافتراضي | الغرض |
+|---------|-----------|-------|
+| `DASHBOARD_PORT` | `8877` | منفذ HTTP |
+| `DASHBOARD_HOST` | `127.0.0.1` | عنوان الربط |
+| `DASHBOARD_DIR` | `<config>/dashboard` | جذر الملفات الثابتة |
+| `OPENCODE_AGENT_DIR` | `<config>/agents` | مجلد الوكلاء المعروض |
+| `OPENCODE_SKILLS_DIR` | `<config>/skills` | مجلد المهارات المعروض |
+| `OPENCODE_CONFIG_FILE` | `<config>/opencode.jsonc` | ملف الإعداد المعروض |
+
+## متغيرات البيئة
+
+يوفِّر المُثبِّت قالب `env.example`. انسخه إلى `.env` وعبّئ القيم الحقيقية —
+لا تُرسِل أي أسرار إلى المستودع أبدًا:
+
+| المتغير | مثال | الغرض |
+|---------|------|-------|
+| `OPENCODE_API_KEY` | `{env:API_KEY}` | مفتاح المزود الرئيسي |
+| `ANTHROPIC_API_KEY` | `{env:ANTHROPIC_API_KEY}` | مزود Anthropic |
+| `OPENAI_API_KEY` | `{env:OPENAI_API_KEY}` | مزود OpenAI |
+| `GEMINI_API_KEY` | `{env:GEMINI_API_KEY}` | مزود Google Gemini |
+| `NVIDIA_API_KEY` | `{env:NVIDIA_API_KEY}` | NVIDIA NIM / NGC |
+
+تُستدعى الأسرار عبر `{env:VAR}` حتى لا تظهر المفاتيح نصًّا صريحًا في المستودع.
+
+## خوادم MCP
+
+يَدمج هذا المستودع **12 خادم MCP (بروتوكول سياق النموذج)** إضافية تُوفِّر سياقًا ومهارات إضافية:
+
+- **context7** — ذاكرة الكودباس والبحث المتجه
+- **GitHub** — تكامل المستودعات وإدارة طلبات السحب
+- **Cloudflare** — Workers AI وخدمات المنصة
+- **Notion** — الوثائق وقاعدة المعارف
+- **Composio** — التكامل والآليات
+- **codebase-memory** — الرسم البياني للمعرفة والفهرسة
+
+يتم تثبيت كل خادم MCP بتعليمات `{env:VAR}` في ملف التكوين البيئي. راجع [متغيرات البيئة](#متغيرات-البيئة) للقائمة الكاملة للنهايات والمصادقات الخاصة بـ MCP.
+
+## المزودون
+
+يَدْعَم المثبِّت وظائف API من عدة مقدمين. يتم تثبيت هذه التبعيات عبر {env:VAR} placeholders في `env.example` — لا ترسِل أبدًا مفاتيح حقيقية إلى المستودع:
+
+| المزود | متغير البيئة | الغرض |
+|-------|-------------|-------|
+| **Anthropic** | `ANTHROPIC_API_KEY` | واجهة API Claude من Anthropic |
+| **OpenAI** | `OPENAI_API_KEY` | واجهة API GPT من OpenAI |
+| **Google Gemini** | `GEMINI_API_KEY` | واجهة API Gemini من Google |
+| **NVIDIA** | `NVIDIA_API_KEY` | واجهة API NVIDIA NIM / NGC |
+| **Context7** | `CONTEXT7_API_KEY` | ذاكرة الكودباس والبحث المتجه |
+| **GitHub** | `GITHUB_TOKEN` | الوصول إلى المستودعات وإدارة طلبات السحب |
+| **Cloudflare** | `CLOUDFLARE_API_KEY` | Workers AI وخدمات المنصة |
+| **Notion** | `NOTION_TOKEN` | الوثائق وقاعدة المعارف |
+| **Composio** | `COMPOSIO_API_KEY` | التكامل والآليات |
+
+## مواقع التثبيت
+
+| المصدر | الوجهة (لينكس/ماك) | الوجهة (ويندوز) |
+|--------|---------------------|------------------|
+| `agents/`، `commands/`، `context/`، `plugins/`، `tools/`، `skills/` | `~/.config/opencode/…` (أو `$PREFIX/.config/opencode/…`) | `~\.config\opencode\…` (أو `$PREFIX\.config\opencode\…`) |
+| `skills/nvidia/` | `~/.agents/skills/` | `~\.agents\skills\` |
+| `skill-lock.json` | `~/.agents/.skill-lock.json` | `~\.agents\.skill-lock.json` |
+| `dashboard/` | `~/.config/opencode/dashboard/` | `~\.config\opencode\dashboard\` |
+| `opencode.jsonc`، `env.example`، `package.json` | `~/.config/opencode/` | `~\.config\opencode\` |
+
+> تُثبَّت الوكلاء والمهارات **دائمًا** في ملف تعريف المستخدم (`~/.agents`)
+> حتى عند استخدام `--prefix` / `-Prefix` لإعداد OpenCode.
+
+## التحقق من التثبيت
+
+يشغّل المُثبِّت فحص تحقق في النهاية:
+
+- وجود `opencode.jsonc`
+- مجلد الوكلاء غير فارغ (يعرض عدد الملفات)
+- وجود مجلدات المهارات (يعرض عدد المجلدات)
+- وجود `server.js` الخاص بلوحة التحكم (إلا مع `--no-dashboard`)
+- وجود `env.example`
+
+أي عنصر مفقود يُبلَّغ عنه كتحذير مع كود خروج يشير إلى ذلك.
+
+## التحديث
+
+```bash
+git pull
+bash install.sh            # إعادة التثبيت؛ تُنشأ النسخ الاحتياطية تلقائيًا
+```
+
+أو على ويندوز:
+
+```powershell
+git pull
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Force
+```
+
+## إلغاء التثبيت
+
+عملية الإلغاء **تُنشئ نسخة احتياطية أولًا** — يُنسخ إعدادك إلى
+`<target>.uninstall-backup.<timestamp>` قبل حذف أي شيء.
+
+### لينكس / ماك
+
+```bash
 bash install.sh --uninstall
 ```
 
+### ويندوز
+
 ```powershell
-# Windows — معاينة أولًا، ثم الإلغاء
-.\install.ps1 -Uninstall -DryRun
-.\install.ps1 -Uninstall
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 ```
 
-> إلغاء التثبيت يزيل `~/.config/opencode` و`~/.agents` (بعد نسخهما احتياطيًا).
-> للإكمال، احذف أيضًا النسخة المحلية المستنسخة: `rm -rf ~/opencode-settings`.
+استخدم `--dry-run` / `-DryRun` أولًا لمعاينة ما سيُحذف بالضبط.
 
----
+## المساهمة
 
-<a id="update"></a>
-## 📦 التحديث من المصدر
+1. انسخ المستودع (Fork).
+2. أبقِ إضافاتك داخل المجلد المناسب (`agents/`، `skills/`، `commands/`،
+   `context/`، `plugins/`، `tools/`، `dashboard/`).
+3. حدّث `VERSION` في المُثبِّت (وشارات هذا الملف) إذا تغيَّر هيكل التثبيت.
+4. راجع [AGENTS.md](AGENTS.md) — ملف تعليمات يمكن لأي وكيل برمجي (OpenCode، Claude Code، Cursor...) استخدامه لتحميل المشروع وتثبيته لك، مع خيار التحديث أو التثبيت النظيف.
+5. تحقق بتجربة جافة قبل فتح طلب السحب:
 
-```bash
-# إعادة مزامنة الإعدادات بعد تغييرات محلية (Linux / macOS):
-rsync -av --exclude node_modules ~/.config/opencode/ ./ --include opencode.jsonc
+   ```bash
+   bash install.sh --dry-run
+   bash install.sh --dry-run --prefix /tmp/verify
+   ```
 
-# تنظيف قبل الدفع: استبدل أي رموز جديدة بنصوص بديلة {env:VAR}.
-```
+## الأمان
 
----
+- لا يحتوي هذا المستودع على **أي أسرار** — فقط عناصر نائبة `{env:VAR}`.
+- لا تكتب المُثبِّتات إلا داخل ملف تعريف المستخدم.
+- لا تلتزم أبدًا بملفات `.env` أو مفاتيح API حقيقية.
+- يُفحص المستودع بحثًا عن أنماط الأسرار الشائعة قبل كل إصدار.
 
-<a id="faq"></a>
-## ❓ استكشاف الأخطاء والأسئلة الشائعة
+## استكشاف الأخطاء
 
-**OpenCode لا يرى العوامل الخاصة بي.**
-تأكد من أن العوامل في `~/.config/opencode/agents`، ثم أعد تشغيل OpenCode. شغّل `bash install.sh --dry-run` للتأكد من أن السكربت يرى الملفات.
+| العرض | الحل |
+|-------|------|
+| إحباط المُثبِّت بخطأ `set -e` | شغّل `bash install.sh --dry-run` لمعرفة الخطوة الفاشلة |
+| خروج غير صفري من `--uninstall --dry-run` | أُصلح في v2.0.0 — أعد التشغيل بأحدث مُثبِّت |
+| المهارات غير مرئية لـ OpenCode | تأكد من وجود `~/.agents/skills` و `skill-lock.json` داخل `~/.agents` |
+| لوحة التحكم لا تعمل | تحقق من تثبيت Node وخلو المنفذ 8877 (غيّره عبر `DASHBOARD_PORT`) |
+| ويندوز يمنع السكربت | استخدم `powershell -ExecutionPolicy Bypass -File .\install.ps1` |
 
-**منفذ لوحة التحكم مستخدم بالفعل.**
-ربما تعمل نسخة أخرى. استخدم منفذًا مختلفًا: `DASHBOARD_PORT=9000 node ~/.config/opencode/dashboard/server.js`، أو أوقف العملية القديمة أولًا.
+## الأسئلة الشائعة
 
-**المهارات لا تظهر.**
-المهارات في `~/.config/opencode/skills/` (OpenCode) و`~/.agents/skills/` (NVIDIA). أعد تشغيل سكربت التثبيت — فهو ينسخ الموقعين ويتحقق من التعدادات.
+**هل يمحو التثبيت إعداداتي الحالية؟**
+فقط بعد طلب التأكيد (أو مع `--force`/`-Force`). تُنشأ نسخة احتياطية مؤرَّخة أولًا.
 
-**كيف أتحقق من التثبيت؟**
-أعد تشغيل سكربت التثبيت — ينتهي بخطوة تحقق تفحص `opencode.jsonc` وتعدّد ملفات العوامل وتؤكد وجود لوحة التحكم. توقّع أن تطابق التعدادات: 50 عاملًا، 47 مهارة OpenCode، 363 مهارة NVIDIA.
+**لماذا تذهب الوكلاء إلى `~/.agents`؟**
+يتوقع وقت تشغيل OpenCode أن تكون الوكلاء في ملف تعريف المستخدم، بغض النظر عن
+بادئة الإعداد. هذا يحافظ على نظافة البادئات المخصصة.
 
----
+**كيف أحدّث مهارات NVIDIA فقط؟**
+`git pull` ثم `bash install.sh -NoDashboard` يعيد تثبيت كل شيء باستثناء لوحة
+التحكم؛ وتُحدَّث المهارات من `skills/nvidia/`.
 
-<a id="contributing"></a>
-## 🤝 المساهمة
+**هل يمكنني تغيير منفذ لوحة التحكم؟**
+نعم — اضبط `DASHBOARD_PORT` قبل تشغيل الخادم.
 
-1. انسخ المستودع (fork) وأنشئ فرع ميزة.
-2. أبقِ كل سر خارجًا — استخدم نصوص بديلة `{env:VAR}` لأي شيء خاص بالجهاز أو المستخدم.
-3. شغّل فحص الأسرار من [ملاحظات الأمان](#security) قبل الدفع.
-4. افتح طلب سحب (PR) يصف التغيير (عامل، مهارة، أو إعداد) وما يضيفه.
+## الترخيص
 
----
+مستودع خاص. المحتوى مقدم لاستخدام المالك؛ راجع إعدادات المستودع لصلاحيات
+الوصول.
 
-<a id="license"></a>
-## 📜 الترخيص
-
-إعدادات شخصية. ترخيص MIT. العوامل والمهارات تحتفظ بترخيصاتها الأصلية (Cloudflare, NVIDIA, Superpowers, ...).
-
----
-
-*آخر تحديث: سبتمبر 2026*
 </div>

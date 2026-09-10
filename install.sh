@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────
-# install.sh — OpenCode codedata installer v2.0.0
+# install.sh — OpenCode codedata installer v2.1.0
 #
 # Copies agents, skills (opencode + nvidia), plugins, commands,
 # context, tools, dashboard, and opencode.jsonc into the correct
@@ -10,18 +10,22 @@
 #   bash install.sh [OPTIONS]
 #
 # Options:
-#   -h, --help         Show this help message
-#   --dry-run          Print what would happen without modifying anything
-#   --uninstall        Remove installed files (with backup)
-#   --no-dashboard     Skip dashboard installation
-#   --no-backup        Skip backup of existing configuration
-#   --force            Overwrite without prompting
-#   --prefix <dir>     Install into custom prefix (default: ~/.config/opencode)
-#                      Agents always go to ~/.agents regardless of prefix
+#   -h, --help              Show this help message
+#   -i, --interactive       Force interactive menu (even with flags)
+#   --dry-run               Print what would happen without modifying anything
+#   --mode <mode>           Force mode: full | update | uninstall | preview
+#   --uninstall             Remove installed files (with backup)
+#   --components <a,b,c>    Component subset (agents,skills,commands,
+#                           context,config,plugins,tools,dashboard,plugindeps)
+#   --no-dashboard          Skip dashboard installation
+#   --no-backup             Skip backup of existing configuration
+#   --force                 Overwrite without prompting
+#   --prefix <dir>          Install into custom prefix (default: ~/.config/opencode)
+#                           Agents always go to ~/.agents regardless of prefix
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-VERSION="2.0.0"
+VERSION="2.1.0"
 
 # ── Resolve script directory ──────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,6 +38,22 @@ UNINSTALL=false
 SKIP_DASHBOARD=false
 SKIP_BACKUP=false
 FORCE=false
+INTERACTIVE=false
+MODE=""                    # full | update | uninstall | preview | ""
+
+# Component flags (true = install, false = skip)
+COMP_AGENTS=true
+COMP_SKILLS=true
+COMP_COMMANDS=true
+COMP_CONTEXT=true
+COMP_CONFIG=true
+COMP_PLUGINS=true
+COMP_TOOLS=true
+COMP_DASHBOARD=true
+COMP_PLUGINDEPS=true
+
+# Track whether user explicitly selected components
+COMPONENTS_EXPLICIT=false
 
 # ── Color detection ───────────────────────────────────────────
 if [ -t 1 ]; then
@@ -64,22 +84,38 @@ Usage:
   bash install.sh [OPTIONS]
 
 Options:
-  -h, --help         Show this help message and exit
-  --dry-run          Print what would happen without modifying anything
-  --uninstall        Remove installed configuration (backs up first)
-  --no-dashboard     Skip dashboard installation
-  --no-backup        Skip backup of existing configuration
-  --force            Overwrite existing files without prompting
-  --prefix <dir>     Install opencode config into <dir> instead of
-                     ~/.config/opencode. Agents always go to ~/.agents.
+  -h, --help              Show this help message and exit
+  -i, --interactive       Force interactive menu even with other flags
+  --dry-run               Print what would happen without modifying anything
+  --mode <mode>           Force a mode non-interactively:
+                            full      — fresh install, overwrite existing
+                            update    — merge missing components only
+                            uninstall — back up then remove installed dirs
+                            preview   — same as --dry-run
+  --uninstall             Remove installed configuration (backs up first)
+  --components <list>     Comma-separated component subset to install.
+                          Valid: agents,skills,commands,context,config,
+                                 plugins,tools,dashboard,plugindeps
+  --no-dashboard          Skip dashboard installation
+  --no-backup             Skip backup of existing configuration
+  --force                 Overwrite existing files without prompting
+  --prefix <dir>          Install opencode config into <dir> instead of
+                          ~/.config/opencode. Agents always go to ~/.agents.
+
+Interactive mode:
+  When run in a terminal without any mode-determining flag, an interactive
+  menu is shown. Use --interactive / -i to force the menu even when flags
+  are present. Outside a TTY with no flags, defaults to full install.
 
 Examples:
-  bash install.sh                      # Standard install
-  bash install.sh --dry-run            # Preview what would happen
-  bash install.sh --prefix /tmp/test   # Install to custom prefix
-  bash install.sh --uninstall          # Back up and remove installed files
-  bash install.sh --force              # Overwrite without confirmation
-  bash install.sh --no-backup --force  # Fast reinstall (no backup, no prompts)
+  bash install.sh                              # Interactive menu (if TTY)
+  bash install.sh --dry-run                    # Preview what would happen
+  bash install.sh --mode update                # Merge-only install
+  bash install.sh --mode full --force          # Overwrite everything
+  bash install.sh --components agents,skills   # Install only agents & skills
+  bash install.sh --prefix /tmp/test           # Install to custom prefix
+  bash install.sh --uninstall                  # Back up and remove
+  bash install.sh -i --force                   # Menu, then force overwrite
 
 Environment variables:
   OPENCODE_PREFIX    Same as --prefix
@@ -94,16 +130,40 @@ parse_args() {
         usage
         exit 0
         ;;
+      -i|--interactive)
+        INTERACTIVE=true
+        shift
+        ;;
       --dry-run)
         DRY_RUN=true
         shift
+        ;;
+      --mode)
+        if [ -z "${2:-}" ]; then
+          err "--mode requires an argument: full, update, uninstall, or preview"
+          exit 1
+        fi
+        case "$2" in
+          full|update|uninstall|preview) MODE="$2" ;;
+          *) err "Invalid mode: $2 (expected: full, update, uninstall, preview)"; exit 1 ;;
+        esac
+        shift 2
         ;;
       --uninstall)
         UNINSTALL=true
         shift
         ;;
+      --components)
+        if [ -z "${2:-}" ]; then
+          err "--components requires a comma-separated list"
+          exit 1
+        fi
+        set_components "$2"
+        shift 2
+        ;;
       --no-dashboard)
         SKIP_DASHBOARD=true
+        COMP_DASHBOARD=false
         shift
         ;;
       --no-backup)
@@ -142,6 +202,54 @@ parse_args() {
   fi
 }
 
+# ── Set components from comma-separated list ──────────────────
+set_components() {
+  local list="$1"
+  # Disable all first
+  COMP_AGENTS=false
+  COMP_SKILLS=false
+  COMP_COMMANDS=false
+  COMP_CONTEXT=false
+  COMP_CONFIG=false
+  COMP_PLUGINS=false
+  COMP_TOOLS=false
+  COMP_DASHBOARD=false
+  COMP_PLUGINDEPS=false
+
+  local IFS=','
+  for comp in $list; do
+    comp=$(echo "$comp" | tr -d ' ')
+    case "$comp" in
+      agents)     COMP_AGENTS=true ;;
+      skills)     COMP_SKILLS=true ;;
+      commands)   COMP_COMMANDS=true ;;
+      context)    COMP_CONTEXT=true ;;
+      config)     COMP_CONFIG=true ;;
+      plugins)    COMP_PLUGINS=true ;;
+      tools)      COMP_TOOLS=true ;;
+      dashboard)  COMP_DASHBOARD=true ;;
+      plugindeps) COMP_PLUGINDEPS=true ;;
+      all)        set_all_components true ;;
+      *)          warn "Unknown component: $comp (skipped)" ;;
+    esac
+  done
+  COMPONENTS_EXPLICIT=true
+}
+
+# ── Enable/disable all components ─────────────────────────────
+set_all_components() {
+  local val="$1"
+  COMP_AGENTS="$val"
+  COMP_SKILLS="$val"
+  COMP_COMMANDS="$val"
+  COMP_CONTEXT="$val"
+  COMP_CONFIG="$val"
+  COMP_PLUGINS="$val"
+  COMP_TOOLS="$val"
+  COMP_DASHBOARD="$val"
+  COMP_PLUGINDEPS="$val"
+}
+
 # ── Helpers ───────────────────────────────────────────────────
 timestamp() { date +%Y%m%d-%H%M%S; }
 
@@ -169,6 +277,25 @@ backup_dir() {
   return 1
 }
 
+# ── No-clobber copy (for update mode) ────────────────────────
+copy_merge() {
+  local src="$1"
+  local dst="$2"
+
+  mkdir -p "$dst"
+  # Try cp -n first (GNU & BSD both support it)
+  if cp -r -n "$src/." "$dst/" 2>/dev/null; then
+    return 0
+  fi
+  # Fallback to rsync if cp -n fails
+  if command -v rsync &>/dev/null; then
+    rsync -a --ignore-existing "$src/" "$dst/"
+    return 0
+  fi
+  warn "No-clobber copy not supported on this platform. Falling back to overwrite."
+  cp -a "$src/"* "$dst/" 2>/dev/null || true
+}
+
 # ── Copy tree with counting ───────────────────────────────────
 copy_tree() {
   local src="$1"
@@ -185,6 +312,9 @@ copy_tree() {
 
   if $DRY_RUN; then
     dim "Would copy $count files: $src → $dst"
+  elif [ "$MODE" = "update" ]; then
+    copy_merge "$src" "$dst"
+    ok "$label ($count files, merge-only)" 2>/dev/null || ok "$label"
   else
     mkdir -p "$dst"
     cp -a "$src/"* "$dst/" 2>/dev/null || true
@@ -207,6 +337,162 @@ confirm_overwrite() {
     esac
   fi
   return 0
+}
+
+# ══════════════════════════════════════════════════════════════
+# INTERACTIVE MENU
+# ══════════════════════════════════════════════════════════════
+show_menu() {
+  echo ""
+  echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}║   OpenCode codedata — Installer  v${VERSION}   ║${RESET}"
+  echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  ${BOLD}What would you like to do?${RESET}"
+  echo ""
+  echo -e "    ${CYAN}[1]${RESET}  Full install    — fresh install of ALL components"
+  echo -e "                         (existing config backed up first)"
+  echo -e "    ${CYAN}[2]${RESET}  Update          — merge: add missing components,"
+  echo -e "                         NEVER overwrite existing user files"
+  echo -e "    ${CYAN}[3]${RESET}  Uninstall       — backup then remove installed dirs"
+  echo -e "    ${CYAN}[4]${RESET}  Preview         — dry-run of a full install"
+  echo -e "    ${CYAN}[5]${RESET}  Help            — show usage"
+  echo -e "    ${CYAN}[0]${RESET}  Exit"
+  echo ""
+}
+
+# ── Component selection checklist ─────────────────────────────
+# Reads user choices for each component. Sets COMP_* variables.
+# Default is Y (install). Typing n skips. "all" sets all to Y, "quit" aborts.
+# Components are processed sequentially; "all" short-circuits the rest.
+select_components() {
+  local mode_label="$1"  # "install" or "update"
+  echo ""
+  echo -e "  ${BOLD}Select components to ${mode_label}:${RESET}"
+  echo -e "  ${DIM}(Enter = keep default, y = include, n = skip, all = all, quit = abort)${RESET}"
+  echo ""
+
+  # Pick a component; handles all/quit shortcuts and y/n toggles.
+  # $1 = label, $2 = variable name to toggle
+  pick_comp() {
+    local name="$1"
+    local var="$2"
+    echo -en "  ${name} [Y/n] "
+    local choice
+    read -r choice </dev/tty || choice=""
+    case "$choice" in
+      all)  set_all_components true
+            echo "    → All components selected"
+            COMPONENTS_EXPLICIT=true
+            return 3 ;;
+      quit) return 2 ;;
+      n|N)  eval "$var=false" ;;
+      y|Y)  eval "$var=true" ;;
+    esac
+    return 0
+  }
+
+  local rc
+  pick_comp "agents"      COMP_AGENTS;      rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "skills"      COMP_SKILLS;      rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "commands"    COMP_COMMANDS;    rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "context"     COMP_CONTEXT;     rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "config"      COMP_CONFIG;      rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "plugins"     COMP_PLUGINS;     rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "tools"       COMP_TOOLS;       rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "dashboard"   COMP_DASHBOARD;   rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+  pick_comp "plugin deps" COMP_PLUGINDEPS;  rc=$?; [ "$rc" -eq 3 ] && return 0; [ "$rc" -eq 2 ] && return 2
+
+  COMPONENTS_EXPLICIT=true
+  return 0
+}
+
+# ── Show selected components summary ──────────────────────────
+show_components_summary() {
+  echo ""
+  echo -e "  ${BOLD}Selected components:${RESET}"
+  $COMP_AGENTS    && ok "agents"      || dim "agents      — skipped"
+  $COMP_SKILLS    && ok "skills"      || dim "skills      — skipped"
+  $COMP_COMMANDS  && ok "commands"    || dim "commands    — skipped"
+  $COMP_CONTEXT   && ok "context"     || dim "context     — skipped"
+  $COMP_CONFIG    && ok "config"      || dim "config      — skipped"
+  $COMP_PLUGINS   && ok "plugins"     || dim "plugins     — skipped"
+  $COMP_TOOLS     && ok "tools"       || dim "tools       — skipped"
+  $COMP_DASHBOARD && ok "dashboard"   || dim "dashboard   — skipped"
+  $COMP_PLUGINDEPS && ok "plugin deps" || dim "plugin deps — skipped"
+  echo ""
+}
+
+# ── Confirm before proceeding ─────────────────────────────────
+confirm_proceed() {
+  if $FORCE || $DRY_RUN; then
+    return 0
+  fi
+  echo -en "  ${BOLD}Proceed? [Y/n]${RESET} "
+  read -r answer </dev/tty || answer=""
+  case "$answer" in
+    n|N) info "Aborted by user."; exit 0 ;;
+    *)   return 0 ;;
+  esac
+}
+
+# ── Run interactive flow ──────────────────────────────────────
+run_interactive() {
+  show_menu
+
+  local choice
+  echo -en "  ${BOLD}Select [0-5]:${RESET} "
+  read -r choice </dev/tty || choice="0"
+
+  case "$choice" in
+    1)
+      # Full install — ask component selection
+      set_all_components true
+      local sel_rc=0
+      select_components "install" || sel_rc=$?
+      if [ "$sel_rc" -eq 2 ]; then
+        info "Aborted by user."
+        exit 0
+      fi
+      show_components_summary
+      confirm_proceed
+      do_install
+      ;;
+    2)
+      # Update — ask component selection
+      MODE="update"
+      set_all_components true
+      local sel_rc=0
+      select_components "update" || sel_rc=$?
+      if [ "$sel_rc" -eq 2 ]; then
+        info "Aborted by user."
+        exit 0
+      fi
+      show_components_summary
+      confirm_proceed
+      do_install
+      ;;
+    3)
+      # Uninstall
+      confirm_proceed
+      do_uninstall
+      exit 0
+      ;;
+    4)
+      # Preview
+      DRY_RUN=true
+      set_all_components true
+      do_install
+      ;;
+    5)
+      usage
+      exit 0
+      ;;
+    0|*)
+      info "Exiting."
+      exit 0
+      ;;
+  esac
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -292,10 +578,14 @@ do_uninstall() {
 # ══════════════════════════════════════════════════════════════
 do_install() {
   local total_steps=7
+  local mode_label="Install"
+  if [ "$MODE" = "update" ]; then
+    mode_label="Update (merge-only)"
+  fi
 
   echo ""
   echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
-  echo -e "${BOLD}║   OpenCode codedata — Installer  v${VERSION}   ║${RESET}"
+  echo -e "${BOLD}║   OpenCode codedata — ${mode_label}  v${VERSION}   ║${RESET}"
   echo -e "${BOLD}╚══════════════════════════════════════════════╝${RESET}"
   $DRY_RUN && echo -e "  ${YELLOW}(dry-run mode — nothing will be modified)${RESET}"
   echo ""
@@ -345,61 +635,104 @@ do_install() {
   echo ""
   echo -e "${BOLD}[4/$total_steps] Installing OpenCode configuration...${RESET}"
 
-  # Core config files
-  if $DRY_RUN; then
-    dim "Would copy: opencode.jsonc, env.example, package.json"
-  else
-    if confirm_overwrite "$OPENCODE_DIR/opencode.jsonc"; then
-      cp "$SCRIPT_DIR/opencode.jsonc"  "$OPENCODE_DIR/opencode.jsonc"
-      cp "$SCRIPT_DIR/env.example"     "$OPENCODE_DIR/env.example"
-      cp "$SCRIPT_DIR/package.json"    "$OPENCODE_DIR/package.json"
-      ok "opencode.jsonc, env.example, package.json"
+  # Core config files (gated by COMP_CONFIG)
+  if $COMP_CONFIG; then
+    if $DRY_RUN; then
+      dim "Would copy: opencode.jsonc, env.example, package.json"
+    elif [ "$MODE" = "update" ]; then
+      # Update mode: never overwrite existing config files
+      for f in opencode.jsonc env.example package.json; do
+        if [ -f "$SCRIPT_DIR/$f" ]; then
+          if [ -f "$OPENCODE_DIR/$f" ]; then
+            dim "Skipping $f (already exists)"
+          else
+            cp "$SCRIPT_DIR/$f" "$OPENCODE_DIR/$f"
+            ok "$f (new)"
+          fi
+        fi
+      done
     else
-      warn "Core config files skipped."
+      # Full install
+      if confirm_overwrite "$OPENCODE_DIR/opencode.jsonc"; then
+        cp "$SCRIPT_DIR/opencode.jsonc"  "$OPENCODE_DIR/opencode.jsonc"
+        cp "$SCRIPT_DIR/env.example"     "$OPENCODE_DIR/env.example"
+        cp "$SCRIPT_DIR/package.json"    "$OPENCODE_DIR/package.json"
+        ok "opencode.jsonc, env.example, package.json"
+      else
+        warn "Core config files skipped."
+      fi
     fi
+  else
+    info "Config skipped (not selected)"
   fi
 
-  # Subdirectories
+  # Subdirectories — gated by individual component flags
   for dir in agents commands config context plugins tools; do
-    if [ -d "$SCRIPT_DIR/$dir" ]; then
+    local comp_flag
+    case "$dir" in
+      agents)   comp_flag=$COMP_AGENTS ;;
+      commands) comp_flag=$COMP_COMMANDS ;;
+      config)   comp_flag=$COMP_CONFIG ;;
+      context)  comp_flag=$COMP_CONTEXT ;;
+      plugins)  comp_flag=$COMP_PLUGINS ;;
+      tools)    comp_flag=$COMP_TOOLS ;;
+    esac
+
+    if $comp_flag && [ -d "$SCRIPT_DIR/$dir" ]; then
       local count
       count=$(file_count "$SCRIPT_DIR/$dir")
       if $DRY_RUN; then
         dim "Would copy: $dir/ ($count files)"
       else
-        cp -a "$SCRIPT_DIR/$dir/"* "$OPENCODE_DIR/$dir/" 2>/dev/null || true
+        if [ "$MODE" = "update" ]; then
+          copy_merge "$SCRIPT_DIR/$dir" "$OPENCODE_DIR/$dir"
+        else
+          cp -a "$SCRIPT_DIR/$dir/"* "$OPENCODE_DIR/$dir/" 2>/dev/null || true
+        fi
         [ "$dir" = "plugins" ] && chmod +x "$OPENCODE_DIR/plugins/notify.ts" 2>/dev/null || true
         ok "$dir/ ($count files)"
       fi
+    elif ! $comp_flag; then
+      dim "$dir/ — skipped (not selected)"
     fi
   done
 
-  # Dashboard
-  if [ -d "$SCRIPT_DIR/dashboard" ]; then
+  # Dashboard (gated by COMP_DASHBOARD)
+  if $COMP_DASHBOARD && [ -d "$SCRIPT_DIR/dashboard" ]; then
     echo ""
     install_dashboard
+  elif ! $COMP_DASHBOARD; then
+    dim "dashboard/ — skipped (not selected)"
   fi
 
   # ── [5/7] Install skills ──
   echo ""
   echo -e "${BOLD}[5/$total_steps] Installing skills...${RESET}"
 
-  install_skills
+  if $COMP_SKILLS; then
+    install_skills
+  else
+    info "Skills skipped (not selected)"
+  fi
 
   # ── [6/7] Plugin dependencies ──
   echo ""
   echo -e "${BOLD}[6/$total_steps] Installing plugin dependencies...${RESET}"
 
-  if $DRY_RUN; then
-    dim "Would run: bun install or npm install (if available)"
-  else
-    if command -v bun &>/dev/null; then
-      (cd "$OPENCODE_DIR" && bun install --no-save 2>/dev/null) && ok "bun install" || warn "bun install failed (non-critical)"
-    elif command -v npm &>/dev/null; then
-      (cd "$OPENCODE_DIR" && npm install --no-save 2>/dev/null) && ok "npm install" || warn "npm install failed (non-critical)"
+  if $COMP_PLUGINDEPS; then
+    if $DRY_RUN; then
+      dim "Would run: bun install or npm install (if available)"
     else
-      warn "Skipping plugin deps (no bun or npm found)"
+      if command -v bun &>/dev/null; then
+        (cd "$OPENCODE_DIR" && bun install --no-save 2>/dev/null) && ok "bun install" || warn "bun install failed (non-critical)"
+      elif command -v npm &>/dev/null; then
+        (cd "$OPENCODE_DIR" && npm install --no-save 2>/dev/null) && ok "npm install" || warn "npm install failed (non-critical)"
+      else
+        warn "Skipping plugin deps (no bun or npm found)"
+      fi
     fi
+  else
+    info "Plugin deps skipped (not selected)"
   fi
 
   # ── [7/7] Verification ──
@@ -417,6 +750,9 @@ install_skills() {
     count=$(dir_count "$SCRIPT_DIR/skills/opencode")
     if $DRY_RUN; then
       dim "Would copy: skills/opencode → $OPENCODE_DIR/skills/ ($count dirs)"
+    elif [ "$MODE" = "update" ]; then
+      copy_merge "$SCRIPT_DIR/skills/opencode" "$OPENCODE_DIR/skills"
+      ok "OpenCode skills ($count dirs, merge-only)"
     else
       cp -a "$SCRIPT_DIR/skills/opencode/"* "$OPENCODE_DIR/skills/" 2>/dev/null || true
       ok "OpenCode skills ($count dirs) → $OPENCODE_DIR/skills/"
@@ -429,6 +765,9 @@ install_skills() {
     count=$(dir_count "$SCRIPT_DIR/skills/nvidia")
     if $DRY_RUN; then
       dim "Would copy: skills/nvidia → $AGENTS_DIR/skills/ ($count dirs)"
+    elif [ "$MODE" = "update" ]; then
+      copy_merge "$SCRIPT_DIR/skills/nvidia" "$AGENTS_DIR/skills"
+      ok "NVIDIA skills ($count dirs, merge-only)"
     else
       cp -a "$SCRIPT_DIR/skills/nvidia/"* "$AGENTS_DIR/skills/" 2>/dev/null || true
       ok "NVIDIA skills ($count dirs) → $AGENTS_DIR/skills/"
@@ -439,6 +778,13 @@ install_skills() {
   if [ -f "$SCRIPT_DIR/skill-lock.json" ]; then
     if $DRY_RUN; then
       dim "Would copy: skill-lock.json → $AGENTS_DIR/.skill-lock.json"
+    elif [ "$MODE" = "update" ]; then
+      if [ -f "$AGENTS_DIR/.skill-lock.json" ]; then
+        dim "Skipping skill-lock.json (already exists)"
+      else
+        cp "$SCRIPT_DIR/skill-lock.json" "$AGENTS_DIR/.skill-lock.json"
+        ok "skill-lock.json → $AGENTS_DIR/.skill-lock.json"
+      fi
     else
       cp "$SCRIPT_DIR/skill-lock.json" "$AGENTS_DIR/.skill-lock.json"
       ok "skill-lock.json → $AGENTS_DIR/.skill-lock.json"
@@ -449,13 +795,21 @@ install_skills() {
 # ── Install dashboard ─────────────────────────────────────────
 install_dashboard() {
   echo -e "${BOLD}Installing dashboard...${RESET}"
-  if $SKIP_DASHBOARD; then
-    info "Dashboard skipped (--no-dashboard)"
+  if $SKIP_DASHBOARD || ! $COMP_DASHBOARD; then
+    info "Dashboard skipped"
     return 0
   fi
 
   if $DRY_RUN; then
     dim "Would copy: dashboard/ → $OPENCODE_DIR/dashboard"
+  elif [ "$MODE" = "update" ]; then
+    if [ -d "$OPENCODE_DIR/dashboard" ]; then
+      dim "Skipping dashboard/ (already exists)"
+    else
+      cp -a "$SCRIPT_DIR/dashboard" "$OPENCODE_DIR/dashboard"
+      chmod +x "$OPENCODE_DIR/dashboard/server.js" 2>/dev/null || true
+      ok "dashboard/ → $OPENCODE_DIR/dashboard (new)"
+    fi
   else
     cp -a "$SCRIPT_DIR/dashboard" "$OPENCODE_DIR/dashboard"
     chmod +x "$OPENCODE_DIR/dashboard/server.js" 2>/dev/null || true
@@ -505,7 +859,7 @@ verify_install() {
   # Check dashboard
   if [ -d "$OPENCODE_DIR/dashboard" ] && [ -f "$OPENCODE_DIR/dashboard/server.js" ]; then
     ok "Dashboard present (server.js)"
-  elif [ "$SKIP_DASHBOARD" = false ]; then
+  elif [ "$COMP_DASHBOARD" = true ] && [ "$SKIP_DASHBOARD" = false ]; then
     warn "Dashboard not found (server.js missing)"
     ((warnings++)) || true
   fi
@@ -531,14 +885,58 @@ verify_install() {
 main() {
   parse_args "$@"
 
-  if $UNINSTALL; then
-    do_uninstall
-    exit 0
+  # ── Determine if we should run interactively ──
+  # Interactive when: stdin is TTY AND (--interactive OR no mode-determining flag)
+  if [ -t 0 ] && { $INTERACTIVE || { [ -z "$MODE" ] && ! $UNINSTALL && ! $DRY_RUN && ! $COMPONENTS_EXPLICIT; }; }; then
+    run_interactive
+    # run_interactive calls do_install/do_uninstall directly
+    # Print final summary only for install (not uninstall which has its own)
+    if [ "$MODE" != "uninstall" ] && ! $UNINSTALL; then
+      show_final_summary
+    fi
+    return 0
   fi
 
-  do_install
+  # ── Non-interactive path ──
+  # If not a TTY and no flags, default to full install with a note
+  if [ ! -t 0 ] && [ -z "$MODE" ] && ! $UNINSTALL && ! $DRY_RUN && ! $COMPONENTS_EXPLICIT; then
+    info "Non-interactive mode: defaulting to full install."
+    info "Run with --interactive for a menu."
+    echo ""
+  fi
 
-  # ── Final summary box ──
+  # Resolve mode from legacy flags
+  if $UNINSTALL && [ -z "$MODE" ]; then
+    MODE="uninstall"
+  elif $DRY_RUN && [ -z "$MODE" ]; then
+    MODE="preview"
+  elif [ -z "$MODE" ]; then
+    MODE="full"
+  fi
+
+  # Map preview mode to dry-run
+  if [ "$MODE" = "preview" ]; then
+    DRY_RUN=true
+  fi
+
+  # Execute the mode
+  case "$MODE" in
+    uninstall)
+      do_uninstall
+      ;;
+    full|update)
+      do_install
+      show_final_summary
+      ;;
+    preview)
+      DRY_RUN=true
+      do_install
+      ;;
+  esac
+}
+
+# ── Final summary box ─────────────────────────────────────────
+show_final_summary() {
   echo ""
   echo -e "${GREEN}╔══════════════════════════════════════════════╗${RESET}"
   echo -e "${GREEN}║   ✅  OpenCode codedata installed!           ║${RESET}"
@@ -553,7 +951,7 @@ main() {
   echo -e "       ${CYAN}cp $OPENCODE_DIR/env.example $OPENCODE_DIR/.env${RESET}"
   echo -e "    2. Edit .env with your real tokens"
   echo -e "    3. Run ${CYAN}opencode${RESET} to start using your agents"
-  if [ -d "$OPENCODE_DIR/dashboard" ] && [ "$SKIP_DASHBOARD" = false ]; then
+  if $COMP_DASHBOARD && [ -d "$OPENCODE_DIR/dashboard" ] && [ "$SKIP_DASHBOARD" = false ]; then
     echo -e "    4. Launch the dashboard (optional):"
     echo -e "       ${CYAN}node $OPENCODE_DIR/dashboard/server.js${RESET}"
     echo -e "       → http://127.0.0.1:8877"
