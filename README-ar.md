@@ -42,8 +42,8 @@
 
 ```bash
 # 1. استنساخ المستودع
-git clone git@github.com:<YOU>/codedata.git ~/codedata
-cd ~/codedata
+git clone git@github.com:Raidan-Ai/opencode-settings.git ~/opencode-settings
+cd ~/opencode-settings
 
 # 2. تشغيل سكربت التثبيت
 bash install.sh
@@ -53,8 +53,8 @@ bash install.sh
 
 ```powershell
 # 1. استنساخ المستودع
-git clone git@github.com:<YOU>/codedata.git $HOME\codedata
-cd $HOME\codedata
+git clone git@github.com:Raidan-Ai/opencode-settings.git $HOME\opencode-settings
+cd $HOME\opencode-settings
 
 # 2. تشغيل سكربت التثبيت (كمسؤول)
 .\install.ps1
