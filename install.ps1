@@ -80,12 +80,13 @@ Write-Ok "opencode.jsonc, env.example, package.json"
 
 # ── Copy subdirectories ──────────────────────────────────────
 $CopyMap = @{
-  'agents'   = $OpenCodeDir
-  'commands' = $OpenCodeDir
-  'config'   = $OpenCodeDir
-  'context'  = $OpenCodeDir
-  'plugins'  = $OpenCodeDir
-  'tools'    = $OpenCodeDir
+  'agents'    = $OpenCodeDir
+  'commands'  = $OpenCodeDir
+  'config'    = $OpenCodeDir
+  'context'   = $OpenCodeDir
+  'dashboard' = $OpenCodeDir
+  'plugins'   = $OpenCodeDir
+  'tools'     = $OpenCodeDir
 }
 
 foreach ($Entry in $CopyMap.GetEnumerator()) {
@@ -176,4 +177,7 @@ Write-Host "    1. Create your .env file:" -ForegroundColor White
 Write-Host "       Copy-Item '$OpenCodeDir\env.example' '$OpenCodeDir\.env'" -ForegroundColor Cyan
 Write-Host "    2. Edit .env with your real tokens" -ForegroundColor White
 Write-Host "    3. Run opencode to start using your agents" -ForegroundColor White
+Write-Host "    4. Launch the dashboard (optional):" -ForegroundColor White
+Write-Host "       node '$OpenCodeDir\dashboard\server.js'" -ForegroundColor Cyan
+Write-Host "       → http://127.0.0.1:8877" -ForegroundColor Cyan
 Write-Host ""
