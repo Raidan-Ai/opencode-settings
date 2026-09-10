@@ -1,0 +1,11 @@
+node_modules/
+package-lock.json
+bun.lock
+.env
+*.env
+.env.*
+.opencode/
+*.bak
+*.bak-*
+.DS_Store
+Thumbs.db

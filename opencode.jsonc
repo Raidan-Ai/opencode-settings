@@ -1,0 +1,354 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ───────────────────────────────────────────────────────────────
+  // AI Agent Engineering OS — global configuration
+  // Mission control: opencode-orchestrator (Commander/Planner/Worker/Reviewer + /task)
+  // ───────────────────────────────────────────────────────────────
+
+  "plugin": [
+    [
+      "opencode-orchestrator",
+      {
+        "agentConcurrency": {
+          "commander": 1,
+          "planner": 6,
+          "worker": 8,
+          "reviewer": 6
+        },
+        "missionLoop": {
+          "ledger": true,
+          "markdownMemory": true,
+          "maxEvidenceEvents": 25
+        }
+      }
+    ],
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
+
+  // ── Permission model ───────────────────────────────────────────
+  // READ/WRITE are allowed; EXECUTE (bash) and external access ASK;
+  // DEPLOY/PRODUCTION gates remain manual (no auto-destructive ops).
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "lsp": "allow",
+    "skill": "allow",
+    "todowrite": "allow",
+    "task": "allow",
+    "question": "allow",
+    "external_directory": "ask",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "ls*": "allow",
+      "cat *": "allow",
+      "echo *": "allow",
+      "pwd": "allow",
+      "node -v*": "allow",
+      "npm *": "allow",
+      "pnpm *": "allow",
+      "uv *": "allow"
+    }
+  },
+
+  // ── MCP matrix ─────────────────────────────────────────────────
+  // Only context7 is enabled (no auth, verifiable). Others are
+  // configured but DISABLED until credentials/infra are provisioned.
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+
+    // GitHub MCP — enabled with a provided PAT. SECURITY: a PAT is a secret.
+    // For production prefer `{env:GITHUB_TOKEN}` sourced from a secret manager
+    // rather than a plaintext token in this file.
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "enabled": true,
+      "environment": {
+        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
+      }
+    },
+
+    // Browser automation. Requires: npx playwright install chromium.
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": false
+    },
+
+    // Requires DATABASE_URL. Use for schema/workload inspection only.
+    "postgres": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-postgres"],
+      "enabled": false,
+      "environment": {
+        "DATABASE_URI": "{env:DATABASE_URL}"
+      }
+    },
+
+    // Requires REDIS_URL.
+    "redis": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-redis"],
+      "enabled": false,
+      "environment": {
+        "REDIS_URL": "{env:REDIS_URL}"
+      }
+    },
+
+    // Milvus: use the official Zilliz MCP server (`mcp-milvus`) once a
+    // standalone Milvus instance is reachable. Verify the package before enabling.
+    "milvus": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-milvus"],
+      "enabled": false,
+      "environment": {
+        "MILVUS_ADDR": "{env:MILVUS_ADDR}"
+      }
+    },
+
+    // ── Cloudflare MCP matrix (added per Cloudflare agent-setup) ──
+    // OAuth-gated servers require: `opencode mcp auth cloudflare`
+    // `cloudflare-docs` is public and needs no auth.
+    "cloudflare": {
+      "type": "remote",
+      "url": "https://mcp.cloudflare.com/mcp",
+      "enabled": true,
+      "oauth": {}
+    },
+    "cloudflare-docs": {
+      "type": "remote",
+      "url": "https://docs.mcp.cloudflare.com/mcp",
+      "enabled": true
+    },
+    "cloudflare-bindings": {
+      "type": "remote",
+      "url": "https://bindings.mcp.cloudflare.com/mcp",
+      "enabled": true,
+      "oauth": {}
+    },
+    "cloudflare-builds": {
+      "type": "remote",
+      "url": "https://builds.mcp.cloudflare.com/mcp",
+      "enabled": true,
+      "oauth": {}
+    },
+    "cloudflare-observability": {
+      "type": "remote",
+      "url": "https://observability.mcp.cloudflare.com/mcp",
+      "enabled": true,
+      "oauth": {}
+    },
+
+    // ── Notion MCP (remote, Bearer token) ──
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:NOTION_TOKEN}"
+      }
+    },
+
+    // ── Composio MCP (remote, x-consumer-api-key header) ──
+    "composio": {
+      "type": "remote",
+      "url": "https://connect.composio.dev/mcp",
+      "enabled": true,
+      "headers": {
+        "x-consumer-api-key": "{env:COMPOSIO_API_KEY}"
+      }
+    },
+
+    // ── codebase-memory-mcp (binary installed to ~/.codebase-memory) ──
+    // Dependency/codebase knowledge-graph MCP. Binary checksum-verified v0.10.8.
+    "codebase-memory": {
+      "type": "local",
+      "command": ["/home/ecs-user/.codebase-memory/codebase-memory-mcp"],
+      "enabled": true
+    },
+
+    // ── Azure MCP Server (2.0 GA) ────────────────────────────────
+    // Official: github.com/microsoft/mcp → servers/Azure.Mcp.Server
+    // (github.com/Azure/azure-mcp is ARCHIVED — do not use)
+    // Auth: Azure CLI default, or AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET
+    // Requires Azure credentials before enabling.
+    "azure-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],
+      "enabled": false,
+      "environment": {
+        "AZURE_MCP_COLLECT_TELEMETRY": "false",
+        "AZURE_MCP_COLLECT_TELEMETRY_MICROSOFT": "false"
+      }
+    },
+
+    // ── AWS MCP servers (awslabs/mcp) ────────────────────────────
+    // Managed AWS-hosted MCP (preview): remote endpoint, IAM-based, CloudTrail audited
+    "aws-mcp": {
+      "type": "remote",
+      "url": "https://aws-mcp.us-east-1.api.aws/mcp",
+      "enabled": false
+    },
+    // AWS Knowledge (latest docs/API refs) — remote, no command
+    "aws-knowledge": {
+      "type": "remote",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "enabled": false
+    },
+    // AWS Documentation — local uvx server (Python-based)
+    "aws-documentation": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-documentation-mcp-server@latest"],
+      "enabled": false,
+      "environment": {
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_DOCUMENTATION_PARTITION": "aws"
+      }
+    },
+    // AWS API — execute validated AWS API calls
+    "aws-api": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-api-mcp-server@latest"],
+      "enabled": false,
+      "environment": {
+        "AWS_REGION": "{env:AWS_REGION}",
+        "AWS_PROFILE": "{env:AWS_PROFILE}"
+      }
+    },
+    // AWS IaC — CloudFormation/CDK/Terraform guidance
+    "aws-iac": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-iac-mcp-server@latest"],
+      "enabled": false,
+      "environment": {
+        "AWS_PROFILE": "{env:AWS_PROFILE}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+
+    // ── Alibaba Cloud Ops MCP (official) ─────────────────────────
+    // github.com/aliyun/alibaba-cloud-ops-mcp-server
+    "alibaba-cloud-ops": {
+      "type": "local",
+      "command": ["uvx", "alibaba-cloud-ops-mcp-server@latest"],
+      "enabled": false,
+      "environment": {
+        "ALIBABA_CLOUD_ACCESS_KEY_ID": "{env:ALIBABA_CLOUD_ACCESS_KEY_ID}",
+        "ALIBABA_CLOUD_ACCESS_KEY_SECRET": "{env:ALIBABA_CLOUD_ACCESS_KEY_SECRET}"
+      }
+    },
+
+    // ── Vercel MCP (official, OAuth) ─────────────────────────────
+    // Remote OAuth — no token pasting; authenticated tools trigger OAuth flow.
+    "vercel": {
+      "type": "remote",
+      "url": "https://mcp.vercel.com",
+      "enabled": false
+    },
+
+    // ── Google Cloud MCP servers (googleapis/gcloud-mcp, preview) ──
+    // Auth: gcloud CLI / Application Default Credentials (no API key)
+    "google-gcloud": {
+      "type": "local",
+      "command": ["npx", "-y", "@google-cloud/gcloud-mcp"],
+      "enabled": false
+    },
+    "google-observability": {
+      "type": "local",
+      "command": ["npx", "-y", "@google-cloud/observability-mcp"],
+      "enabled": false
+    },
+    "google-storage": {
+      "type": "local",
+      "command": ["npx", "-y", "@google-cloud/storage-mcp"],
+      "enabled": false
+    },
+
+    // ── Firebase MCP (official, ships in Firebase CLI) ───────────
+    // Auth: `firebase login` or ADC. Options: --dir, --only auth,firestore,storage
+    "firebase-mcp": {
+      "type": "local",
+      "command": ["npx", "-y", "firebase-tools@latest", "mcp"],
+      "enabled": false
+    }
+  },
+  "disabled_providers": [],
+  "provider": {
+    "k3": {
+      "name": "K3",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1/chat/completions"
+      },
+      "models": {
+        "moonshotai/kimi-k3": {
+          "name": "moonshotai/kimi-k3"
+        }
+      }
+    },
+    "deepseekpro": {
+      "name": "DeepSeekPro",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1"
+      },
+      "models": {
+        "deepseek-ai/deepseek-v4-pro-0813": {
+          "name": "deepseek-ai/deepseek-v4-pro-0813"
+        }
+      }
+    },
+    "nemotron": {
+      "name": "nemotron",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1"
+      },
+      "models": {
+        "nvidia/nemotron-3.5-lightning-30b-a3b": {
+          "name": "nvidia/nemotron-3.5-lightning-30b-a3b"
+        }
+      }
+    },
+    "raidan": {
+      "name": "RaidnPro",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://reforms-ferrari-richard-rear.trycloudflare.com/v1"
+      },
+      "models": {
+        "auto/best-coding": {
+          "name": "auto/best-coding"
+        },
+        "auto/best-reasoning": {
+          "name": "auto/best-reasoning"
+        },
+        "auto/best-chat": {
+          "name": "auto/best-chat"
+        },
+        "auto/best-coding-fast": {
+          "name": "auto/best-coding-fast"
+        },
+        "auto/smart": {
+          "name": "auto/smart"
+        },
+        "auto/best-fast": {
+          "name": "auto/best-fast"
+        }
+      }
+    }
+  }
+}
