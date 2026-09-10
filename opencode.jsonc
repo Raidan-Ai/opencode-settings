@@ -327,7 +327,9 @@
       "name": "RaidnPro",
       "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "https://reforms-ferrari-richard-rear.trycloudflare.com/v1"
+        // Machine-specific tunnel endpoint. Set RAIDAN_BASE_URL in your
+        // environment (e.g. your own Cloudflare tunnel or gateway URL).
+        "baseURL": "{env:RAIDAN_BASE_URL}"
       },
       "models": {
         "auto/best-coding": {
