@@ -1,11 +1,23 @@
+# ── Dependencies (regenerable) ─────────────────────────────
 node_modules/
 package-lock.json
 bun.lock
+
+# ── Secrets — never commit real credentials ────────────────
 .env
-*.env
 .env.*
-.opencode/
+!.env.example
+
+# ── OpenCode / editor noise ────────────────────────────────
+.config/opencode/.DS_Store
 *.bak
 *.bak-*
+*.log
+
+# ── OS noise (cross-platform) ──────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# ── Local OpenCode state ───────────────────────────────────
+.opencode/
